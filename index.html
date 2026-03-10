@@ -34,6 +34,15 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 Preview
             </button>
+            <div class="header-separator"></div>
+            <button id="btn-confluence-load" class="btn btn-confluence" title="Cargar diagrama desde Confluence">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M5 10l7 7 7-7"/><path d="M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2"/></svg>
+                Confluence
+            </button>
+            <button id="btn-confluence-publish" class="btn btn-confluence-pub" title="Publicar diagrama en Confluence">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V3M5 12l7-7 7 7"/><path d="M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2"/></svg>
+                Publicar
+            </button>
         </div>
     </header>
 
@@ -222,6 +231,85 @@
             </div>
             <div class="modal-body modal-body--preview">
                 <div id="preview-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Cargar desde Confluence -->
+    <div class="modal-overlay" id="modal-confluence-load" style="display:none;">
+        <div class="modal modal--wide">
+            <div class="modal-header">
+                <div class="modal-header-icon confluence-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+                </div>
+                <h3>Cargar desde Confluence</h3>
+                <button class="modal-close" id="modal-confluence-load-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="confluence-tabs">
+                    <button class="confluence-tab active" data-tab="by-id">Por ID de página</button>
+                    <button class="confluence-tab" data-tab="by-title">Por título</button>
+                    <button class="confluence-tab" data-tab="by-search">Buscar</button>
+                </div>
+
+                <div class="confluence-tab-content active" id="tab-by-id">
+                    <label>ID de la página de Confluence:</label>
+                    <input type="text" id="confluence-page-id" class="modal-input" placeholder="Ej: 5421039684">
+                    <p class="import-hint">Encontralo en la URL de Confluence: .../pages/XXXXXXX/...</p>
+                </div>
+
+                <div class="confluence-tab-content" id="tab-by-title" style="display:none;">
+                    <label>Space Key:</label>
+                    <input type="text" id="confluence-space-key" class="modal-input" placeholder="Ej: DEV, PROD, ~usuario">
+                    <label style="margin-top:12px;">Título de la página:</label>
+                    <input type="text" id="confluence-page-title" class="modal-input" placeholder="Ej: PRE.03.06 - Compra/Venta de Dólares">
+                </div>
+
+                <div class="confluence-tab-content" id="tab-by-search" style="display:none;">
+                    <label>Buscar páginas:</label>
+                    <div class="search-row">
+                        <input type="text" id="confluence-search-query" class="modal-input" placeholder="Texto a buscar...">
+                        <button class="btn btn-primary btn-sm" id="btn-confluence-search">Buscar</button>
+                    </div>
+                    <div id="confluence-search-results" class="search-results"></div>
+                </div>
+
+                <div id="confluence-load-status" class="confluence-status" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modal-confluence-load-cancel">Cancelar</button>
+                <button class="btn btn-confluence" id="btn-confluence-fetch">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 3v12M5 10l7 7 7-7"/></svg>
+                    Cargar Diagrama
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Publicar en Confluence -->
+    <div class="modal-overlay" id="modal-confluence-publish" style="display:none;">
+        <div class="modal modal--wide">
+            <div class="modal-header">
+                <div class="modal-header-icon confluence-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M12 19V3M5 12l7-7 7 7"/><path d="M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2"/></svg>
+                </div>
+                <h3>Publicar en Confluence</h3>
+                <button class="modal-close" id="modal-confluence-publish-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <label>ID de la página destino:</label>
+                <input type="text" id="publish-page-id" class="modal-input" placeholder="Ej: 5421039684">
+                <label style="margin-top:12px;">Título de la sección (H2):</label>
+                <input type="text" id="publish-section-title" class="modal-input" placeholder="Flujo de negocio" value="Flujo de negocio">
+                <p class="import-hint">El diagrama se insertará/actualizará dentro de la macro HTML de esa página.</p>
+                <div id="confluence-publish-status" class="confluence-status" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modal-confluence-publish-cancel">Cancelar</button>
+                <button class="btn btn-confluence-pub" id="btn-confluence-do-publish">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 19V3M5 12l7-7 7 7"/></svg>
+                    Publicar
+                </button>
             </div>
         </div>
     </div>

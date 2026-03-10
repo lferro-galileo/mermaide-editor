@@ -959,4 +959,230 @@ ${mermaidCode}
     // Init mermaid (for preview)
     mermaid.initialize({ startOnLoad: false, theme: 'default' });
 
+    // ─── Confluence Integration ───
+
+    const API_BASE = window.location.origin + '/api';
+    let lastLoadedPageId = null;
+
+    // Tab switching
+    document.querySelectorAll('.confluence-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.confluence-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.confluence-tab-content').forEach(c => {
+                c.classList.remove('active');
+                c.style.display = 'none';
+            });
+            tab.classList.add('active');
+            const target = document.getElementById('tab-' + tab.dataset.tab);
+            if (target) {
+                target.classList.add('active');
+                target.style.display = 'block';
+            }
+        });
+    });
+
+    // Open load modal
+    document.getElementById('btn-confluence-load').addEventListener('click', () => {
+        hideStatus('confluence-load-status');
+        document.getElementById('modal-confluence-load').style.display = 'flex';
+    });
+
+    // Close load modal
+    ['modal-confluence-load-close', 'modal-confluence-load-cancel'].forEach(id => {
+        document.getElementById(id).addEventListener('click', () => {
+            document.getElementById('modal-confluence-load').style.display = 'none';
+        });
+    });
+
+    // Search in Confluence
+    document.getElementById('btn-confluence-search').addEventListener('click', async () => {
+        const query = document.getElementById('confluence-search-query').value.trim();
+        if (!query) { showToast('Escribí un texto para buscar'); return; }
+
+        const resultsDiv = document.getElementById('confluence-search-results');
+        resultsDiv.innerHTML = '<div class="search-loading">Buscando...</div>';
+
+        try {
+            const resp = await fetch(API_BASE + '/confluence/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query }),
+            });
+            const data = await resp.json();
+
+            if (!data.results || data.results.length === 0) {
+                resultsDiv.innerHTML = '<div class="search-empty">No se encontraron resultados</div>';
+                return;
+            }
+
+            resultsDiv.innerHTML = data.results.map(r => `
+                <div class="search-result-item" data-page-id="${r.id}">
+                    <div class="search-result-title">${escapeHtml(r.title)}</div>
+                    <div class="search-result-meta">ID: ${r.id} · Space: ${r.space}</div>
+                </div>
+            `).join('');
+
+            resultsDiv.querySelectorAll('.search-result-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    resultsDiv.querySelectorAll('.search-result-item').forEach(i => i.classList.remove('selected'));
+                    item.classList.add('selected');
+                    document.getElementById('confluence-page-id').value = item.dataset.pageId;
+                    // Switch to "by-id" tab with the selected ID
+                    document.querySelectorAll('.confluence-tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.confluence-tab-content').forEach(c => {
+                        c.classList.remove('active');
+                        c.style.display = 'none';
+                    });
+                    const byIdTab = document.querySelector('[data-tab="by-id"]');
+                    byIdTab.classList.add('active');
+                    document.getElementById('tab-by-id').style.display = 'block';
+                    document.getElementById('tab-by-id').classList.add('active');
+                    showStatus('confluence-load-status', 'info', `Página seleccionada: ${escapeHtml(item.querySelector('.search-result-title').textContent)} (${item.dataset.pageId})`);
+                });
+            });
+        } catch (err) {
+            resultsDiv.innerHTML = `<div class="search-error">Error: ${err.message}</div>`;
+        }
+    });
+
+    document.getElementById('confluence-search-query').addEventListener('keydown', e => {
+        if (e.key === 'Enter') document.getElementById('btn-confluence-search').click();
+    });
+
+    // Fetch page and extract Mermaid
+    document.getElementById('btn-confluence-fetch').addEventListener('click', async () => {
+        const activeTab = document.querySelector('.confluence-tab.active');
+        const tab = activeTab ? activeTab.dataset.tab : 'by-id';
+
+        let body = {};
+        if (tab === 'by-id') {
+            const pageId = document.getElementById('confluence-page-id').value.trim();
+            if (!pageId) { showToast('Ingresá el ID de la página'); return; }
+            body = { page_id: pageId };
+        } else if (tab === 'by-title') {
+            const spaceKey = document.getElementById('confluence-space-key').value.trim();
+            const title = document.getElementById('confluence-page-title').value.trim();
+            if (!spaceKey || !title) { showToast('Completá space key y título'); return; }
+            body = { title, space_key: spaceKey };
+        } else {
+            showToast('Seleccioná una página de los resultados');
+            return;
+        }
+
+        showStatus('confluence-load-status', 'loading', 'Conectando con Confluence...');
+
+        try {
+            const resp = await fetch(API_BASE + '/confluence/get-page', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            const data = await resp.json();
+
+            if (!resp.ok) {
+                showStatus('confluence-load-status', 'error', `Error ${resp.status}: ${data.detail || 'Error desconocido'}`);
+                return;
+            }
+
+            if (!data.has_mermaid || !data.mermaid_code) {
+                showStatus('confluence-load-status', 'warning', `Página "${data.title}" encontrada pero no contiene diagrama Mermaid.`);
+                return;
+            }
+
+            showStatus('confluence-load-status', 'success', `Diagrama encontrado en "${data.title}" (v${data.version}). Importando...`);
+            lastLoadedPageId = data.id;
+
+            setTimeout(() => {
+                try {
+                    importMermaidCode(data.mermaid_code);
+                    document.getElementById('modal-confluence-load').style.display = 'none';
+                    document.getElementById('publish-page-id').value = data.id;
+                    showToast(`Diagrama importado desde "${data.title}"`);
+                } catch (err) {
+                    showStatus('confluence-load-status', 'error', 'Error al parsear el diagrama: ' + err.message);
+                }
+            }, 600);
+        } catch (err) {
+            showStatus('confluence-load-status', 'error', 'Error de conexión: ' + err.message);
+        }
+    });
+
+    // Open publish modal
+    document.getElementById('btn-confluence-publish').addEventListener('click', () => {
+        if (nodes.length === 0) {
+            showToast('No hay diagrama para publicar');
+            return;
+        }
+        hideStatus('confluence-publish-status');
+        if (lastLoadedPageId) {
+            document.getElementById('publish-page-id').value = lastLoadedPageId;
+        }
+        document.getElementById('modal-confluence-publish').style.display = 'flex';
+    });
+
+    // Close publish modal
+    ['modal-confluence-publish-close', 'modal-confluence-publish-cancel'].forEach(id => {
+        document.getElementById(id).addEventListener('click', () => {
+            document.getElementById('modal-confluence-publish').style.display = 'none';
+        });
+    });
+
+    // Do publish
+    document.getElementById('btn-confluence-do-publish').addEventListener('click', async () => {
+        const pageId = document.getElementById('publish-page-id').value.trim();
+        const sectionTitle = document.getElementById('publish-section-title').value.trim() || 'Flujo de negocio';
+
+        if (!pageId) { showToast('Ingresá el ID de la página destino'); return; }
+
+        const mermaidCode = generateMermaidCode();
+        if (nodes.length === 0) { showToast('No hay diagrama para publicar'); return; }
+
+        showStatus('confluence-publish-status', 'loading', 'Publicando en Confluence...');
+
+        try {
+            const resp = await fetch(API_BASE + '/confluence/publish', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    page_id: pageId,
+                    mermaid_code: mermaidCode,
+                    section_title: sectionTitle,
+                }),
+            });
+            const data = await resp.json();
+
+            if (!resp.ok) {
+                showStatus('confluence-publish-status', 'error', `Error ${resp.status}: ${data.detail || 'Error al publicar'}`);
+                return;
+            }
+
+            showStatus('confluence-publish-status', 'success',
+                `Publicado exitosamente (v${data.version}). <a href="${data.url}" target="_blank" rel="noopener">Ver en Confluence →</a>`
+            );
+            lastLoadedPageId = pageId;
+        } catch (err) {
+            showStatus('confluence-publish-status', 'error', 'Error de conexión: ' + err.message);
+        }
+    });
+
+    // ── Status helpers ──
+
+    function showStatus(elementId, type, message) {
+        const el = document.getElementById(elementId);
+        el.style.display = 'block';
+        el.className = 'confluence-status confluence-status--' + type;
+        el.innerHTML = message;
+    }
+
+    function hideStatus(elementId) {
+        const el = document.getElementById(elementId);
+        el.style.display = 'none';
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
 })();
