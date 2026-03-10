@@ -78,7 +78,7 @@
         const defaults = NODE_DEFAULTS[type];
         const name = defaults.prefix + defaults.label;
 
-        const node = { id, type, name, x, y };
+        const node = { id, type, name, x, y, locked: false };
         nodes.push(node);
 
         renderNode(node);
@@ -88,19 +88,29 @@
     function renderNode(node) {
         const el = document.createElement('div');
         el.className = `canvas-node ${NODE_DEFAULTS[node.type].className}`;
+        if (node.locked) el.classList.add('canvas-node--locked');
         el.id = node.id;
         el.style.left = node.x + 'px';
         el.style.top = node.y + 'px';
         el.textContent = node.name;
 
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'node-delete-btn';
-        deleteBtn.innerHTML = '&times;';
-        deleteBtn.addEventListener('click', e => {
+        if (node.locked) {
+            const lockIcon = document.createElement('span');
+            lockIcon.className = 'node-lock-icon';
+            lockIcon.innerHTML = '&#128274;';
+            el.appendChild(lockIcon);
+        }
+
+        // "⋮" menu button
+        const menuBtn = document.createElement('button');
+        menuBtn.className = 'node-menu-btn';
+        menuBtn.innerHTML = '&#8942;';
+        menuBtn.addEventListener('click', e => {
             e.stopPropagation();
-            removeNode(node.id);
+            e.preventDefault();
+            toggleNodeMenu(node.id, menuBtn);
         });
-        el.appendChild(deleteBtn);
+        el.appendChild(menuBtn);
 
         // Double click to edit
         el.addEventListener('dblclick', e => {
@@ -108,15 +118,18 @@
             openEditModal(node.id);
         });
 
-        // Mouse down for dragging or connecting
+        // Mouse down for dragging or connecting (only left button)
         el.addEventListener('mousedown', e => {
-            if (e.target === deleteBtn) return;
+            if (e.button !== 0) return;
+            if (e.target === menuBtn || menuBtn.contains(e.target)) return;
             e.preventDefault();
 
             if (connectMode) {
                 handleConnectClick(node.id, el);
                 return;
             }
+
+            if (node.locked) return;
 
             const rect = el.getBoundingClientRect();
             const canvasRect = canvas.getBoundingClientRect();
@@ -231,6 +244,7 @@
             connectMode = false;
             connectBtn.classList.remove('active');
             connectHint.style.display = 'none';
+            closeNodeMenu();
         }
     });
 
@@ -363,6 +377,116 @@
         return { x: px, y: py };
     }
 
+    // ─── Node dropdown menu (⋮) ───
+
+    let openMenuEl = null;
+    let openMenuNodeId = null;
+
+    function toggleNodeMenu(nodeId, anchorBtn) {
+        if (openMenuNodeId === nodeId) {
+            closeNodeMenu();
+            return;
+        }
+        closeNodeMenu();
+
+        const node = nodes.find(n => n.id === nodeId);
+        if (!node) return;
+
+        openMenuNodeId = nodeId;
+
+        const menu = document.createElement('div');
+        menu.className = 'node-dropdown';
+        openMenuEl = menu;
+
+        const items = [
+            { label: 'Cambiar nombre', icon: 'edit', action: () => openEditModal(nodeId) },
+            { label: 'Eliminar', icon: 'trash', action: () => removeNode(nodeId), danger: true },
+            { type: 'separator' },
+            node.locked
+                ? { label: 'Desbloquear', icon: 'unlock', action: () => toggleLock(nodeId, false) }
+                : { label: 'Bloquear', icon: 'lock', action: () => toggleLock(nodeId, true) },
+        ];
+
+        const icons = {
+            edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+            trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>',
+            lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>',
+            unlock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 019.9-1"/></svg>',
+        };
+
+        items.forEach(item => {
+            if (item.type === 'separator') {
+                const sep = document.createElement('div');
+                sep.className = 'node-dropdown-sep';
+                menu.appendChild(sep);
+                return;
+            }
+
+            const btn = document.createElement('button');
+            btn.className = 'node-dropdown-item' + (item.danger ? ' node-dropdown-item--danger' : '');
+            btn.innerHTML = `<span class="node-dropdown-icon">${icons[item.icon]}</span><span>${item.label}</span>`;
+            btn.addEventListener('mousedown', e => {
+                e.stopPropagation();
+                e.preventDefault();
+                closeNodeMenu();
+                item.action();
+            });
+            menu.appendChild(btn);
+        });
+
+        anchorBtn.parentElement.appendChild(menu);
+
+        // Reposition if overflows bottom of viewport
+        requestAnimationFrame(() => {
+            const menuRect = menu.getBoundingClientRect();
+            if (menuRect.bottom > window.innerHeight) {
+                menu.classList.add('node-dropdown--above');
+            }
+        });
+    }
+
+    function closeNodeMenu() {
+        if (openMenuEl) {
+            openMenuEl.remove();
+            openMenuEl = null;
+            openMenuNodeId = null;
+        }
+    }
+
+    function toggleLock(nodeId, lock) {
+        const node = nodes.find(n => n.id === nodeId);
+        if (!node) return;
+        node.locked = lock;
+
+        const el = document.getElementById(nodeId);
+        if (!el) return;
+
+        if (lock) {
+            el.classList.add('canvas-node--locked');
+            let lockIcon = el.querySelector('.node-lock-icon');
+            if (!lockIcon) {
+                lockIcon = document.createElement('span');
+                lockIcon.className = 'node-lock-icon';
+                lockIcon.innerHTML = '&#128274;';
+                el.appendChild(lockIcon);
+            }
+            showToast(`"${node.name}" bloqueado`);
+        } else {
+            el.classList.remove('canvas-node--locked');
+            const lockIcon = el.querySelector('.node-lock-icon');
+            if (lockIcon) lockIcon.remove();
+            showToast(`"${node.name}" desbloqueado`);
+        }
+    }
+
+    // Close dropdown on click anywhere
+    document.addEventListener('mousedown', e => {
+        if (openMenuEl && !openMenuEl.contains(e.target) && !e.target.closest('.node-menu-btn')) {
+            closeNodeMenu();
+        }
+    });
+    document.addEventListener('scroll', () => closeNodeMenu(), true);
+
     // ─── Remove node ───
 
     function removeNode(nodeId) {
@@ -461,10 +585,74 @@
 
     // ─── Generate Mermaid code ───
 
+    function buildFullHtml(mermaidCode) {
+        return `<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagrama de Flujo</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"><\/script>
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default', flowchart: { nodeSpacing: 25, rankSpacing: 35, curve: 'basis' } });
+    <\/script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; padding: 40px; background: #f8f9fa; display: flex; flex-direction: column; align-items: center; margin: 0; }
+        h1 { color: #1a3a5c; margin-bottom: 24px; font-size: 1.4rem; text-align: center; }
+        .diagram-container { background: white; padding: 32px; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,.08); width: 100%; max-width: 1100px; overflow-x: auto; }
+        table { width: 100%; max-width: 1100px; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #e5e7eb; font-size: 13px; }
+        th { background: #f1f5f9; font-weight: 600; }
+        .cb { display: inline-block; width: 16px; height: 16px; border-radius: 3px; vertical-align: middle; margin-right: 6px; }
+    </style>
+</head>
+<body>
+    <h1>Diagrama de Flujo</h1>
+    <div class="diagram-container">
+        <div class="mermaid">
+${mermaidCode}
+        </div>
+    </div>
+    <table>
+        <tr><th>Color</th><th>Prefijo</th><th>Significado</th></tr>
+        <tr><td><span class="cb" style="background:#E6F3FF;border:2px solid #00008B"></span>Azul</td><td>srv.</td><td>Servicio / Proceso del sistema</td></tr>
+        <tr><td><span class="cb" style="background:#FFF5E6;border:2px solid #FF8C00"></span>Naranja</td><td>paso.</td><td>Acción del usuario</td></tr>
+        <tr><td><span class="cb" style="background:#F3E6FF;border:2px solid #8A2BE2"></span>Violeta</td><td>err.</td><td>Error / Excepción</td></tr>
+        <tr><td><span class="cb" style="background:#E6FFE6;border:2px solid #006400"></span>Verde</td><td>sub.</td><td>Sub-funcionalidad</td></tr>
+        <tr><td><span class="cb" style="background:#FFF;border:2px solid #000"></span>Blanco</td><td>(rombo)</td><td>Decisión</td></tr>
+    </table>
+</body>
+</html>`;
+    }
+
+    let activeCodeTab = 'html';
+
     document.getElementById('btn-generate').addEventListener('click', () => {
-        const code = generateMermaidCode();
-        document.getElementById('generated-code').textContent = code;
+        const mermaidCode = generateMermaidCode();
+        const fullHtml = buildFullHtml(mermaidCode);
+
+        document.getElementById('generated-mermaid-only').value = mermaidCode;
+        document.getElementById('generated-html-full').value = fullHtml;
+
+        activeCodeTab = 'html';
+        document.getElementById('generated-code').textContent = fullHtml;
+        document.querySelectorAll('.code-tab').forEach(t => t.classList.toggle('active', t.dataset.codeTab === 'html'));
+
         document.getElementById('modal-code').style.display = 'flex';
+    });
+
+    document.querySelectorAll('.code-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            activeCodeTab = tab.dataset.codeTab;
+            document.querySelectorAll('.code-tab').forEach(t => t.classList.toggle('active', t === tab));
+
+            const codeEl = document.getElementById('generated-code');
+            if (activeCodeTab === 'html') {
+                codeEl.textContent = document.getElementById('generated-html-full').value;
+            } else {
+                codeEl.textContent = document.getElementById('generated-mermaid-only').value;
+            }
+        });
     });
 
     document.getElementById('modal-code-close').addEventListener('click', () => {
@@ -557,38 +745,16 @@
 
     document.getElementById('btn-copy-code').addEventListener('click', () => {
         const code = document.getElementById('generated-code').textContent;
+        const label = activeCodeTab === 'html' ? 'HTML completo' : 'Código Mermaid';
         navigator.clipboard.writeText(code).then(() => {
-            showToast('Código copiado al portapapeles');
+            showToast(label + ' copiado al portapapeles');
         });
     });
 
     // ─── Download HTML ───
 
     document.getElementById('btn-download-html').addEventListener('click', () => {
-        const mermaidCode = document.getElementById('generated-code').textContent;
-        const html = `<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Diagrama de Flujo</title>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"><\/script>
-    <script>
-        mermaid.initialize({ startOnLoad: true });
-    <\/script>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; padding: 40px; background: #f8f9fa; }
-        h1 { color: #333; margin-bottom: 24px; }
-        .mermaid { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    </style>
-</head>
-<body>
-    <h1>Diagrama Generado</h1>
-    <div class="mermaid">
-${mermaidCode}
-    </div>
-</body>
-</html>`;
+        const html = document.getElementById('generated-html-full').value;
 
         const blob = new Blob([html], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
@@ -822,7 +988,7 @@ ${mermaidCode}
             const newId = 'n' + (++nodeIdCounter);
             idMap[origId] = newId;
 
-            const node = { id: newId, type: info.type, name: info.label, x, y };
+            const node = { id: newId, type: info.type, name: info.label, x, y, locked: false };
             nodes.push(node);
             renderNode(node);
         });
@@ -1184,5 +1350,24 @@ ${mermaidCode}
         div.textContent = text;
         return div.innerHTML;
     }
+
+    // ── Auto-import from Documentador via sessionStorage ──
+
+    (function checkSessionImport() {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('import') === 'session') {
+            const code = sessionStorage.getItem('importMermaid');
+            if (code) {
+                sessionStorage.removeItem('importMermaid');
+                try {
+                    importMermaidCode(code);
+                    showToast('Diagrama importado desde Documentador');
+                } catch (err) {
+                    showToast('Error importando: ' + err.message);
+                }
+                window.history.replaceState({}, '', window.location.pathname);
+            }
+        }
+    })();
 
 })();

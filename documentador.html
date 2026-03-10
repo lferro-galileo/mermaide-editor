@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentador - Mermaid Tools</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <link rel="stylesheet" href="documentador.css">
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="doc-header">
+        <div class="doc-header-left">
+            <a href="/" class="doc-back" title="Volver al inicio">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </a>
+            <svg class="doc-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            <h1>Documentador</h1>
+        </div>
+    </header>
+
+    <!-- Main layout -->
+    <main class="doc-main">
+
+        <!-- Panel izquierdo: inputs -->
+        <aside class="doc-sidebar">
+            <div class="doc-section">
+                <h3 class="doc-section-title">
+                    <span class="doc-step-badge">1</span>
+                    Página base (ESRE)
+                </h3>
+                <p class="doc-hint">Pegá el link o ID de la página de Confluence que sirve de línea base.</p>
+                <input type="text" id="input-confluence-url" class="doc-input" placeholder="https://technisys.atlassian.net/wiki/.../pages/12345/... o solo el ID">
+            </div>
+
+            <div class="doc-section">
+                <h3 class="doc-section-title">
+                    <span class="doc-step-badge">2</span>
+                    Issues de Jira
+                </h3>
+                <p class="doc-hint">Listá las keys de Jira separadas por coma, salto de línea, o espacio.</p>
+                <textarea id="input-jira-keys" class="doc-textarea" rows="6" placeholder="PROJ-101, PROJ-102, PROJ-103&#10;PROJ-104&#10;PROJ-105"></textarea>
+                <p class="doc-hint doc-hint--count">Detectadas: <strong id="jira-count">0</strong> issues</p>
+            </div>
+
+            <div class="doc-section">
+                <button class="doc-btn-primary" id="btn-process">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    Procesar Documentación
+                </button>
+            </div>
+        </aside>
+
+        <!-- Panel derecho: resultados -->
+        <div class="doc-content">
+
+            <!-- Estado inicial -->
+            <div class="doc-empty" id="doc-empty">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="64" height="64">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" opacity="0.3"/>
+                    <polyline points="14 2 14 8 20 8" opacity="0.3"/>
+                </svg>
+                <p>Completá los datos de la izquierda y hacé click en "Procesar" para generar la documentación consolidada.</p>
+            </div>
+
+            <!-- Progreso -->
+            <div class="doc-progress" id="doc-progress" style="display:none;">
+                <h3>Procesando documentación...</h3>
+                <div class="doc-progress-bar-container">
+                    <div class="doc-progress-bar" id="progress-bar"></div>
+                </div>
+                <div class="doc-progress-log" id="progress-log"></div>
+            </div>
+
+            <!-- Resultado -->
+            <div class="doc-result" id="doc-result" style="display:none;">
+
+                <div class="doc-result-header">
+                    <h2 id="result-title">Documentación Consolidada</h2>
+                    <div class="doc-result-actions">
+                        <button class="doc-btn-outline" id="btn-copy-doc" title="Copiar documento">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                            Copiar
+                        </button>
+                        <button class="doc-btn-outline" id="btn-download-doc" title="Descargar HTML">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                            Descargar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Resumen -->
+                <div class="doc-card" id="card-summary">
+                    <div class="doc-card-header">
+                        <h3>Resumen General</h3>
+                    </div>
+                    <div class="doc-card-body" id="summary-content"></div>
+                </div>
+
+                <!-- Confluencia base -->
+                <div class="doc-card" id="card-confluence">
+                    <div class="doc-card-header">
+                        <h3>Página Base (ESRE)</h3>
+                        <a id="confluence-link" href="#" target="_blank" class="doc-card-link">Ver en Confluence →</a>
+                    </div>
+                    <div class="doc-card-body" id="confluence-content"></div>
+                </div>
+
+                <!-- Jiras procesados -->
+                <div class="doc-card" id="card-jiras">
+                    <div class="doc-card-header">
+                        <h3>Issues de Jira</h3>
+                    </div>
+                    <div class="doc-card-body" id="jiras-content"></div>
+                </div>
+
+                <!-- Diagrama de flujo -->
+                <div class="doc-card" id="card-diagram">
+                    <div class="doc-card-header">
+                        <h3>Diagrama de Flujo</h3>
+                        <button class="doc-btn-small" id="btn-open-in-editor" title="Abrir en el Graficador">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>
+                            Abrir en Graficador
+                        </button>
+                    </div>
+                    <div class="doc-card-body">
+                        <div id="diagram-container"></div>
+                        <details class="doc-code-details">
+                            <summary>Ver código Mermaid</summary>
+                            <pre id="diagram-code" class="doc-code-block"></pre>
+                        </details>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script src="documentador.js"></script>
+</body>
+</html>

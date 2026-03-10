@@ -277,6 +277,178 @@ def _build_mermaid_macro(mermaid_code: str) -> str:
     )
 
 
+# ── Documentador endpoints ────────────────────────────────────────────────
+
+class DocPageRequest(BaseModel):
+    url_or_id: str
+
+
+class DocJiraRequest(BaseModel):
+    keys: list[str]
+
+
+def _extract_page_id_from_url(url_or_id: str) -> str:
+    """Extrae el page ID de una URL de Confluence o devuelve el ID directo."""
+    url_or_id = url_or_id.strip()
+    if url_or_id.isdigit():
+        return url_or_id
+    m = re.search(r"/pages/(\d+)", url_or_id)
+    if m:
+        return m.group(1)
+    m = re.search(r"pageId=(\d+)", url_or_id)
+    if m:
+        return m.group(1)
+    return url_or_id
+
+
+@app.post("/api/documentador/confluence-page")
+def doc_get_confluence_page(req: DocPageRequest):
+    """Lee una página de Confluence y devuelve su contenido en markdown y storage."""
+    page_id = _extract_page_id_from_url(req.url_or_id)
+
+    with _http_client() as client:
+        resp = client.get(
+            f"{CONFLUENCE_BASE}/rest/api/content/{page_id}",
+            params={"expand": "body.storage,body.view,version,space,ancestors"},
+        )
+    if resp.status_code != 200:
+        raise HTTPException(resp.status_code, f"No se pudo obtener la página: {resp.text}")
+
+    page = resp.json()
+    storage = page.get("body", {}).get("storage", {}).get("value", "")
+    view_html = page.get("body", {}).get("view", {}).get("value", "")
+
+    soup = BeautifulSoup(view_html or storage, "html.parser")
+    text_content = soup.get_text(separator="\n", strip=True)
+
+    sections = _extract_sections(storage)
+    mermaid_code = extract_mermaid_from_storage(storage)
+
+    return {
+        "id": page["id"],
+        "title": page["title"],
+        "space": page.get("space", {}).get("key", ""),
+        "version": page.get("version", {}).get("number", 1),
+        "url": CONFLUENCE_BASE + page.get("_links", {}).get("webui", ""),
+        "text_content": text_content[:8000],
+        "sections": sections,
+        "has_mermaid": mermaid_code is not None,
+        "mermaid_code": mermaid_code,
+    }
+
+
+def _extract_sections(storage_html: str) -> list[dict]:
+    """Extrae las secciones (h1, h2, h3) con su contenido resumido."""
+    soup = BeautifulSoup(storage_html, "html.parser")
+    sections = []
+    current = None
+
+    for el in soup.children:
+        if not hasattr(el, "name") or el.name is None:
+            continue
+        if el.name in ("h1", "h2", "h3"):
+            if current:
+                sections.append(current)
+            current = {
+                "level": int(el.name[1]),
+                "title": el.get_text(strip=True),
+                "content": "",
+            }
+        elif current is not None:
+            text = el.get_text(separator=" ", strip=True)
+            if text and len(current["content"]) < 1500:
+                current["content"] += text + "\n"
+
+    if current:
+        sections.append(current)
+
+    return sections
+
+
+@app.post("/api/documentador/jira-issues")
+def doc_get_jira_issues(req: DocJiraRequest):
+    """Lee múltiples issues de Jira por key y devuelve su info relevante."""
+    if not req.keys:
+        raise HTTPException(400, "Se requiere al menos una key de Jira")
+
+    keys_str = ", ".join(f'"{k.strip()}"' for k in req.keys)
+    jql = f"key in ({keys_str})"
+
+    with _http_client() as client:
+        resp = client.get(
+            f"{CONFLUENCE_BASE.replace('/wiki', '')}/rest/api/2/search",
+            params={
+                "jql": jql,
+                "maxResults": len(req.keys),
+                "fields": "summary,description,status,issuetype,priority,assignee,labels,comment",
+            },
+        )
+
+    if resp.status_code != 200:
+        jira_base = CONFLUENCE_BASE.replace("/wiki", "")
+        with _http_client() as client:
+            resp = client.get(
+                f"{jira_base}/rest/api/2/search",
+                params={
+                    "jql": jql,
+                    "maxResults": len(req.keys),
+                    "fields": "summary,description,status,issuetype,priority,assignee,labels",
+                },
+            )
+        if resp.status_code != 200:
+            raise HTTPException(resp.status_code, f"Error buscando Jiras: {resp.text}")
+
+    data = resp.json()
+    issues = []
+
+    for issue in data.get("issues", []):
+        fields = issue.get("fields", {})
+        desc_raw = fields.get("description") or ""
+        if isinstance(desc_raw, dict):
+            desc_text = _extract_adf_text(desc_raw)
+        else:
+            desc_soup = BeautifulSoup(str(desc_raw), "html.parser")
+            desc_text = desc_soup.get_text(separator="\n", strip=True)
+
+        issues.append({
+            "key": issue["key"],
+            "summary": fields.get("summary", ""),
+            "description": desc_text[:3000],
+            "status": fields.get("status", {}).get("name", ""),
+            "type": fields.get("issuetype", {}).get("name", ""),
+            "priority": fields.get("priority", {}).get("name", ""),
+            "assignee": (fields.get("assignee") or {}).get("displayName", "Sin asignar"),
+            "labels": fields.get("labels", []),
+        })
+
+    found_keys = {i["key"] for i in issues}
+    not_found = [k for k in req.keys if k.strip() not in found_keys]
+
+    return {
+        "issues": issues,
+        "total": len(issues),
+        "not_found": not_found,
+    }
+
+
+def _extract_adf_text(adf: dict) -> str:
+    """Extrae texto plano de Atlassian Document Format (ADF)."""
+    texts = []
+
+    def walk(node):
+        if isinstance(node, dict):
+            if node.get("type") == "text":
+                texts.append(node.get("text", ""))
+            for child in node.get("content", []):
+                walk(child)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    walk(adf)
+    return "\n".join(texts)
+
+
 # ── Servir archivos estáticos del editor ─────────────────────────────────
 
 static_dir = Path(__file__).parent

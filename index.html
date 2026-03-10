@@ -3,317 +3,282 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mermaid Flow Editor</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <title>Lea Tools</title>
+    <style>
+        :root {
+            --color-bg: #0f1117;
+            --color-surface: #1a1d27;
+            --color-surface-hover: #242836;
+            --color-border: #2e3347;
+            --color-text: #e4e6f0;
+            --color-text-secondary: #8b8fa8;
+            --color-primary: #6366f1;
+            --color-primary-hover: #818cf8;
+            --color-accent: #22d3ee;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--color-bg);
+            color: var(--color-text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .landing-header {
+            padding: 48px 32px 0;
+            text-align: center;
+        }
+
+        .landing-logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+
+        .landing-logo svg {
+            width: 48px;
+            height: 48px;
+            color: var(--color-accent);
+        }
+
+        .landing-logo h1 {
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--color-text) 0%, var(--color-accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .landing-subtitle {
+            color: var(--color-text-secondary);
+            font-size: 16px;
+            max-width: 520px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 24px;
+            padding: 48px 32px;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            flex: 1;
+        }
+
+        .tool-card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 16px;
+            padding: 32px;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+        }
+
+        .tool-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--card-accent, var(--color-primary)), var(--card-accent-end, var(--color-accent)));
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .tool-card:hover {
+            border-color: var(--card-accent, var(--color-primary));
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--card-accent, var(--color-primary));
+        }
+
+        .tool-card:hover::before {
+            opacity: 1;
+        }
+
+        .tool-card-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            background: var(--card-icon-bg, rgba(99, 102, 241, 0.12));
+        }
+
+        .tool-card-icon svg {
+            width: 28px;
+            height: 28px;
+            color: var(--card-accent, var(--color-primary));
+        }
+
+        .tool-card h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .tool-card p {
+            color: var(--color-text-secondary);
+            font-size: 14px;
+            line-height: 1.6;
+            flex: 1;
+        }
+
+        .tool-card-tags {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .tool-tag {
+            font-size: 11px;
+            font-weight: 500;
+            padding: 4px 10px;
+            border-radius: 100px;
+            background: var(--card-icon-bg, rgba(99, 102, 241, 0.12));
+            color: var(--card-accent, var(--color-primary));
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+        }
+
+        .tool-card-arrow {
+            position: absolute;
+            top: 32px;
+            right: 32px;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--color-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: translateX(-8px);
+            transition: all 0.3s;
+        }
+
+        .tool-card-arrow svg {
+            width: 16px;
+            height: 16px;
+            color: var(--color-text-secondary);
+        }
+
+        .tool-card:hover .tool-card-arrow {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* Card: Graficador */
+        .tool-card--graficador {
+            --card-accent: #6366f1;
+            --card-accent-end: #22d3ee;
+            --card-icon-bg: rgba(99, 102, 241, 0.12);
+        }
+
+        /* Card: Documentador */
+        .tool-card--documentador {
+            --card-accent: #f59e0b;
+            --card-accent-end: #ef4444;
+            --card-icon-bg: rgba(245, 158, 11, 0.12);
+        }
+
+        .landing-footer {
+            text-align: center;
+            padding: 24px 32px;
+            color: var(--color-text-secondary);
+            font-size: 12px;
+            border-top: 1px solid var(--color-border);
+        }
+
+        @media (max-width: 640px) {
+            .landing-header { padding: 32px 20px 0; }
+            .tools-grid { padding: 32px 20px; }
+            .landing-logo h1 { font-size: 24px; }
+            .tool-card { padding: 24px; }
+        }
+    </style>
 </head>
 <body>
-    <header class="app-header">
-        <div class="header-left">
-            <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <header class="landing-header">
+        <div class="landing-logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 2L2 7l10 5 10-5-10-5z"/>
                 <path d="M2 17l10 5 10-5"/>
                 <path d="M2 12l10 5 10-5"/>
             </svg>
-            <h1>Mermaid Flow Editor</h1>
+            <h1>Lea Tools</h1>
         </div>
-        <div class="header-actions">
-            <button id="btn-import" class="btn btn-secondary" title="Importar código Mermaid">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M5 10l7 7 7-7"/><path d="M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2"/></svg>
-                Importar
-            </button>
-            <button id="btn-clear" class="btn btn-secondary" title="Limpiar canvas">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
-                Limpiar
-            </button>
-            <button id="btn-generate" class="btn btn-primary" title="Generar código Mermaid">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>
-                Generar Código
-            </button>
-            <button id="btn-preview" class="btn btn-accent" title="Preview del diagrama">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                Preview
-            </button>
-            <div class="header-separator"></div>
-            <button id="btn-confluence-load" class="btn btn-confluence" title="Cargar diagrama desde Confluence">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M5 10l7 7 7-7"/><path d="M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2"/></svg>
-                Confluence
-            </button>
-            <button id="btn-confluence-publish" class="btn btn-confluence-pub" title="Publicar diagrama en Confluence">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V3M5 12l7-7 7 7"/><path d="M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2"/></svg>
-                Publicar
-            </button>
-        </div>
+        <p class="landing-subtitle">Suite de herramientas para diseño de flujos, diagramas y documentación técnica con integración Confluence.</p>
     </header>
 
-    <main class="app-main">
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-section">
-                <h3 class="sidebar-title">Elementos</h3>
-                <p class="sidebar-hint">Arrastrá los elementos al canvas</p>
-            </div>
+    <div class="tools-grid">
 
-            <div class="sidebar-section">
-                <h4 class="sidebar-subtitle">Nodos</h4>
-                <div class="element-list">
-                    <div class="draggable-element" draggable="true" data-type="start">
-                        <div class="element-icon element-icon--decision">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/></svg>
-                        </div>
-                        <span>Inicio</span>
-                    </div>
-                    <div class="draggable-element" draggable="true" data-type="end">
-                        <div class="element-icon element-icon--end">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="8"/></svg>
-                        </div>
-                        <span>Fin</span>
-                    </div>
-                    <div class="draggable-element" draggable="true" data-type="srv">
-                        <div class="element-icon element-icon--srv">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 13h4"/></svg>
-                        </div>
-                        <span>Servicio (srv.)</span>
-                    </div>
-                    <div class="draggable-element" draggable="true" data-type="paso">
-                        <div class="element-icon element-icon--paso">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 12h8M12 8v8"/></svg>
-                        </div>
-                        <span>Paso Usuario (paso.)</span>
-                    </div>
-                    <div class="draggable-element" draggable="true" data-type="err">
-                        <div class="element-icon element-icon--err">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
-                        </div>
-                        <span>Error (err.)</span>
-                    </div>
-                    <div class="draggable-element" draggable="true" data-type="sub">
-                        <div class="element-icon element-icon--sub">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h10v10H7z"/></svg>
-                        </div>
-                        <span>Sub-flujo (sub.)</span>
-                    </div>
-                    <div class="draggable-element" draggable="true" data-type="decision">
-                        <div class="element-icon element-icon--decision">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l10 10-10 10L2 12z"/></svg>
-                        </div>
-                        <span>Decisión</span>
-                    </div>
-                </div>
+        <!-- Graficador -->
+        <a href="/editor.html" class="tool-card tool-card--graficador">
+            <div class="tool-card-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </div>
+            <div class="tool-card-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                    <path d="M2 17l10 5 10-5"/>
+                    <path d="M2 12l10 5 10-5"/>
+                </svg>
+            </div>
+            <h2>Graficador</h2>
+            <p>Editor visual drag-and-drop para crear diagramas de flujo Mermaid. Importá, exportá y publicá directamente en Confluence.</p>
+            <div class="tool-card-tags">
+                <span class="tool-tag">Mermaid</span>
+                <span class="tool-tag">Drag & Drop</span>
+                <span class="tool-tag">Confluence</span>
+            </div>
+        </a>
 
-            <div class="sidebar-section">
-                <h4 class="sidebar-subtitle">Conexiones</h4>
-                <div class="element-list">
-                    <div class="connection-mode-btn" id="btn-connect" title="Activar modo conexión">
-                        <div class="element-icon element-icon--connection">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                        </div>
-                        <span>Conectar nodos</span>
-                    </div>
-                </div>
-                <p class="sidebar-hint" id="connect-hint" style="display:none;">Click en nodo origen, luego en nodo destino</p>
+        <!-- Documentador -->
+        <a href="/documentador.html" class="tool-card tool-card--documentador">
+            <div class="tool-card-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </div>
+            <div class="tool-card-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                    <polyline points="10 9 9 9 8 9"/>
+                </svg>
+            </div>
+            <h2>Documentador</h2>
+            <p>Consolidá documentación desde Confluence + Jiras. Genera resúmenes integrales y diagramas de flujo automáticos.</p>
+            <div class="tool-card-tags">
+                <span class="tool-tag">Confluence</span>
+                <span class="tool-tag">Jira</span>
+                <span class="tool-tag">Auto-diagrama</span>
+            </div>
+        </a>
 
-            <div class="sidebar-section">
-                <h4 class="sidebar-subtitle">Leyenda</h4>
-                <div class="legend">
-                    <div class="legend-item"><span class="legend-color" style="background:#E6F3FF;border-color:#00008B;"></span> Servicio</div>
-                    <div class="legend-item"><span class="legend-color" style="background:#FFF5E6;border-color:#FF8C00;"></span> Paso Usuario</div>
-                    <div class="legend-item"><span class="legend-color" style="background:#F3E6FF;border-color:#8A2BE2;"></span> Error</div>
-                    <div class="legend-item"><span class="legend-color" style="background:#E6FFE6;border-color:#006400;"></span> Sub-flujo</div>
-                    <div class="legend-item"><span class="legend-color" style="background:#FFFFFF;border-color:#000000;"></span> Decisión / Inicio</div>
-                </div>
-            </div>
-        </aside>
-
-        <div class="canvas-container" id="canvas-container">
-            <div class="canvas" id="canvas">
-                <svg class="connections-layer" id="connections-layer"></svg>
-                <div class="canvas-placeholder" id="canvas-placeholder">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="64" height="64">
-                        <path d="M12 2L2 7l10 5 10-5-10-5z" opacity="0.3"/>
-                        <path d="M2 17l10 5 10-5" opacity="0.3"/>
-                        <path d="M2 12l10 5 10-5" opacity="0.3"/>
-                    </svg>
-                    <p>Arrastrá elementos aquí para comenzar</p>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- Modal: Editar nodo -->
-    <div class="modal-overlay" id="modal-edit" style="display:none;">
-        <div class="modal">
-            <div class="modal-header">
-                <h3>Editar Nodo</h3>
-                <button class="modal-close" id="modal-edit-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <label>Nombre del nodo:</label>
-                <input type="text" id="edit-node-name" class="modal-input" placeholder="Nombre...">
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="modal-edit-delete">Eliminar nodo</button>
-                <button class="btn btn-primary" id="modal-edit-save">Guardar</button>
-            </div>
-        </div>
     </div>
 
-    <!-- Modal: Editar conexión -->
-    <div class="modal-overlay" id="modal-edge" style="display:none;">
-        <div class="modal">
-            <div class="modal-header">
-                <h3>Editar Conexión</h3>
-                <button class="modal-close" id="modal-edge-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <label>Etiqueta de la conexión (opcional):</label>
-                <input type="text" id="edit-edge-label" class="modal-input" placeholder="Ej: Si, No, Error...">
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="modal-edge-delete">Eliminar conexión</button>
-                <button class="btn btn-primary" id="modal-edge-save">Guardar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal: Código generado -->
-    <div class="modal-overlay" id="modal-code" style="display:none;">
-        <div class="modal modal--wide">
-            <div class="modal-header">
-                <h3>Código Mermaid Generado</h3>
-                <button class="modal-close" id="modal-code-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <pre id="generated-code" class="code-block"></pre>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="btn-copy-code">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-                    Copiar
-                </button>
-                <button class="btn btn-primary" id="btn-download-html">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-                    Descargar HTML
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal: Importar código -->
-    <div class="modal-overlay" id="modal-import" style="display:none;">
-        <div class="modal modal--wide">
-            <div class="modal-header">
-                <h3>Importar Código Mermaid</h3>
-                <button class="modal-close" id="modal-import-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <label>Pegá tu código Mermaid aquí:</label>
-                <textarea id="import-code" class="modal-textarea" rows="16" placeholder="graph TD&#10;&#10;    classDef srv fill:#E6F3FF,stroke:#00008B,stroke-width:2px;&#10;    ...&#10;&#10;    n1[&quot;srv.Recuperar cuentas&quot;]&#10;    n2[&quot;paso.Mostrar cuentas&quot;]&#10;&#10;    n1 --> n2"></textarea>
-                <p class="import-hint">Se aceptan los formatos generados por este editor y código Mermaid estándar con graph TD/LR.</p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="modal-import-cancel">Cancelar</button>
-                <button class="btn btn-primary" id="modal-import-apply">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 3v12M5 10l7 7 7-7"/></svg>
-                    Importar
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal: Preview -->
-    <div class="modal-overlay" id="modal-preview" style="display:none;">
-        <div class="modal modal--wide">
-            <div class="modal-header">
-                <h3>Preview del Diagrama</h3>
-                <button class="modal-close" id="modal-preview-close">&times;</button>
-            </div>
-            <div class="modal-body modal-body--preview">
-                <div id="preview-container"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal: Cargar desde Confluence -->
-    <div class="modal-overlay" id="modal-confluence-load" style="display:none;">
-        <div class="modal modal--wide">
-            <div class="modal-header">
-                <div class="modal-header-icon confluence-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
-                </div>
-                <h3>Cargar desde Confluence</h3>
-                <button class="modal-close" id="modal-confluence-load-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="confluence-tabs">
-                    <button class="confluence-tab active" data-tab="by-id">Por ID de página</button>
-                    <button class="confluence-tab" data-tab="by-title">Por título</button>
-                    <button class="confluence-tab" data-tab="by-search">Buscar</button>
-                </div>
-
-                <div class="confluence-tab-content active" id="tab-by-id">
-                    <label>ID de la página de Confluence:</label>
-                    <input type="text" id="confluence-page-id" class="modal-input" placeholder="Ej: 5421039684">
-                    <p class="import-hint">Encontralo en la URL de Confluence: .../pages/XXXXXXX/...</p>
-                </div>
-
-                <div class="confluence-tab-content" id="tab-by-title" style="display:none;">
-                    <label>Space Key:</label>
-                    <input type="text" id="confluence-space-key" class="modal-input" placeholder="Ej: DEV, PROD, ~usuario">
-                    <label style="margin-top:12px;">Título de la página:</label>
-                    <input type="text" id="confluence-page-title" class="modal-input" placeholder="Ej: PRE.03.06 - Compra/Venta de Dólares">
-                </div>
-
-                <div class="confluence-tab-content" id="tab-by-search" style="display:none;">
-                    <label>Buscar páginas:</label>
-                    <div class="search-row">
-                        <input type="text" id="confluence-search-query" class="modal-input" placeholder="Texto a buscar...">
-                        <button class="btn btn-primary btn-sm" id="btn-confluence-search">Buscar</button>
-                    </div>
-                    <div id="confluence-search-results" class="search-results"></div>
-                </div>
-
-                <div id="confluence-load-status" class="confluence-status" style="display:none;"></div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="modal-confluence-load-cancel">Cancelar</button>
-                <button class="btn btn-confluence" id="btn-confluence-fetch">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 3v12M5 10l7 7 7-7"/></svg>
-                    Cargar Diagrama
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal: Publicar en Confluence -->
-    <div class="modal-overlay" id="modal-confluence-publish" style="display:none;">
-        <div class="modal modal--wide">
-            <div class="modal-header">
-                <div class="modal-header-icon confluence-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M12 19V3M5 12l7-7 7 7"/><path d="M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2"/></svg>
-                </div>
-                <h3>Publicar en Confluence</h3>
-                <button class="modal-close" id="modal-confluence-publish-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <label>ID de la página destino:</label>
-                <input type="text" id="publish-page-id" class="modal-input" placeholder="Ej: 5421039684">
-                <label style="margin-top:12px;">Título de la sección (H2):</label>
-                <input type="text" id="publish-section-title" class="modal-input" placeholder="Flujo de negocio" value="Flujo de negocio">
-                <p class="import-hint">El diagrama se insertará/actualizará dentro de la macro HTML de esa página.</p>
-                <div id="confluence-publish-status" class="confluence-status" style="display:none;"></div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="modal-confluence-publish-cancel">Cancelar</button>
-                <button class="btn btn-confluence-pub" id="btn-confluence-do-publish">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 19V3M5 12l7-7 7 7"/></svg>
-                    Publicar
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <script src="app.js"></script>
+    <footer class="landing-footer">
+        Lea Tools · Built with Cursor
+    </footer>
 </body>
 </html>
