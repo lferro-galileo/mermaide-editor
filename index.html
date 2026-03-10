@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mermaid Flow Editor</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-left">
+            <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                <path d="M2 17l10 5 10-5"/>
+                <path d="M2 12l10 5 10-5"/>
+            </svg>
+            <h1>Mermaid Flow Editor</h1>
+        </div>
+        <div class="header-actions">
+            <button id="btn-import" class="btn btn-secondary" title="Importar código Mermaid">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M5 10l7 7 7-7"/><path d="M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2"/></svg>
+                Importar
+            </button>
+            <button id="btn-clear" class="btn btn-secondary" title="Limpiar canvas">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                Limpiar
+            </button>
+            <button id="btn-generate" class="btn btn-primary" title="Generar código Mermaid">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>
+                Generar Código
+            </button>
+            <button id="btn-preview" class="btn btn-accent" title="Preview del diagrama">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                Preview
+            </button>
+        </div>
+    </header>
+
+    <main class="app-main">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">Elementos</h3>
+                <p class="sidebar-hint">Arrastrá los elementos al canvas</p>
+            </div>
+
+            <div class="sidebar-section">
+                <h4 class="sidebar-subtitle">Nodos</h4>
+                <div class="element-list">
+                    <div class="draggable-element" draggable="true" data-type="start">
+                        <div class="element-icon element-icon--decision">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/></svg>
+                        </div>
+                        <span>Inicio</span>
+                    </div>
+                    <div class="draggable-element" draggable="true" data-type="end">
+                        <div class="element-icon element-icon--end">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="8"/></svg>
+                        </div>
+                        <span>Fin</span>
+                    </div>
+                    <div class="draggable-element" draggable="true" data-type="srv">
+                        <div class="element-icon element-icon--srv">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 13h4"/></svg>
+                        </div>
+                        <span>Servicio (srv.)</span>
+                    </div>
+                    <div class="draggable-element" draggable="true" data-type="paso">
+                        <div class="element-icon element-icon--paso">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 12h8M12 8v8"/></svg>
+                        </div>
+                        <span>Paso Usuario (paso.)</span>
+                    </div>
+                    <div class="draggable-element" draggable="true" data-type="err">
+                        <div class="element-icon element-icon--err">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+                        </div>
+                        <span>Error (err.)</span>
+                    </div>
+                    <div class="draggable-element" draggable="true" data-type="sub">
+                        <div class="element-icon element-icon--sub">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h10v10H7z"/></svg>
+                        </div>
+                        <span>Sub-flujo (sub.)</span>
+                    </div>
+                    <div class="draggable-element" draggable="true" data-type="decision">
+                        <div class="element-icon element-icon--decision">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l10 10-10 10L2 12z"/></svg>
+                        </div>
+                        <span>Decisión</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h4 class="sidebar-subtitle">Conexiones</h4>
+                <div class="element-list">
+                    <div class="connection-mode-btn" id="btn-connect" title="Activar modo conexión">
+                        <div class="element-icon element-icon--connection">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                        </div>
+                        <span>Conectar nodos</span>
+                    </div>
+                </div>
+                <p class="sidebar-hint" id="connect-hint" style="display:none;">Click en nodo origen, luego en nodo destino</p>
+            </div>
+
+            <div class="sidebar-section">
+                <h4 class="sidebar-subtitle">Leyenda</h4>
+                <div class="legend">
+                    <div class="legend-item"><span class="legend-color" style="background:#E6F3FF;border-color:#00008B;"></span> Servicio</div>
+                    <div class="legend-item"><span class="legend-color" style="background:#FFF5E6;border-color:#FF8C00;"></span> Paso Usuario</div>
+                    <div class="legend-item"><span class="legend-color" style="background:#F3E6FF;border-color:#8A2BE2;"></span> Error</div>
+                    <div class="legend-item"><span class="legend-color" style="background:#E6FFE6;border-color:#006400;"></span> Sub-flujo</div>
+                    <div class="legend-item"><span class="legend-color" style="background:#FFFFFF;border-color:#000000;"></span> Decisión / Inicio</div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="canvas-container" id="canvas-container">
+            <div class="canvas" id="canvas">
+                <svg class="connections-layer" id="connections-layer"></svg>
+                <div class="canvas-placeholder" id="canvas-placeholder">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="64" height="64">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z" opacity="0.3"/>
+                        <path d="M2 17l10 5 10-5" opacity="0.3"/>
+                        <path d="M2 12l10 5 10-5" opacity="0.3"/>
+                    </svg>
+                    <p>Arrastrá elementos aquí para comenzar</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal: Editar nodo -->
+    <div class="modal-overlay" id="modal-edit" style="display:none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Editar Nodo</h3>
+                <button class="modal-close" id="modal-edit-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <label>Nombre del nodo:</label>
+                <input type="text" id="edit-node-name" class="modal-input" placeholder="Nombre...">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modal-edit-delete">Eliminar nodo</button>
+                <button class="btn btn-primary" id="modal-edit-save">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Editar conexión -->
+    <div class="modal-overlay" id="modal-edge" style="display:none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Editar Conexión</h3>
+                <button class="modal-close" id="modal-edge-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <label>Etiqueta de la conexión (opcional):</label>
+                <input type="text" id="edit-edge-label" class="modal-input" placeholder="Ej: Si, No, Error...">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modal-edge-delete">Eliminar conexión</button>
+                <button class="btn btn-primary" id="modal-edge-save">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Código generado -->
+    <div class="modal-overlay" id="modal-code" style="display:none;">
+        <div class="modal modal--wide">
+            <div class="modal-header">
+                <h3>Código Mermaid Generado</h3>
+                <button class="modal-close" id="modal-code-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <pre id="generated-code" class="code-block"></pre>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="btn-copy-code">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                    Copiar
+                </button>
+                <button class="btn btn-primary" id="btn-download-html">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                    Descargar HTML
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Importar código -->
+    <div class="modal-overlay" id="modal-import" style="display:none;">
+        <div class="modal modal--wide">
+            <div class="modal-header">
+                <h3>Importar Código Mermaid</h3>
+                <button class="modal-close" id="modal-import-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <label>Pegá tu código Mermaid aquí:</label>
+                <textarea id="import-code" class="modal-textarea" rows="16" placeholder="graph TD&#10;&#10;    classDef srv fill:#E6F3FF,stroke:#00008B,stroke-width:2px;&#10;    ...&#10;&#10;    n1[&quot;srv.Recuperar cuentas&quot;]&#10;    n2[&quot;paso.Mostrar cuentas&quot;]&#10;&#10;    n1 --> n2"></textarea>
+                <p class="import-hint">Se aceptan los formatos generados por este editor y código Mermaid estándar con graph TD/LR.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modal-import-cancel">Cancelar</button>
+                <button class="btn btn-primary" id="modal-import-apply">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 3v12M5 10l7 7 7-7"/></svg>
+                    Importar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Preview -->
+    <div class="modal-overlay" id="modal-preview" style="display:none;">
+        <div class="modal modal--wide">
+            <div class="modal-header">
+                <h3>Preview del Diagrama</h3>
+                <button class="modal-close" id="modal-preview-close">&times;</button>
+            </div>
+            <div class="modal-body modal-body--preview">
+                <div id="preview-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
